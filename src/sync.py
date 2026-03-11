@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
-"""Scrapes a LibraryCalendar.com site and serves a combined ICS feed."""
+"""Scrapes a LibraryCalendar.com site and pushes a combined ICS feed to GitHub."""
 
-import http.server
+import base64
 import logging
 import os
 import re
-import threading
 import time
-from pathlib import Path
 
 import requests
 from bs4 import BeautifulSoup
@@ -15,17 +13,17 @@ from bs4 import BeautifulSoup
 CALENDAR_URL = os.environ.get("CALENDAR_URL", "").rstrip("/")
 CALENDAR_FILTERS = os.environ.get("CALENDAR_FILTERS", "")
 REFRESH_INTERVAL = int(os.environ.get("REFRESH_INTERVAL", "3600"))
-OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "/data")
-PORT = int(os.environ.get("PORT", "8080"))
 CALENDAR_NAME = os.environ.get("CALENDAR_NAME", "Library Events")
 REQUEST_DELAY = float(os.environ.get("REQUEST_DELAY", "1.0"))
+
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+GITHUB_REPO = os.environ.get("GITHUB_REPO", "")
+GITHUB_FILE_PATH = os.environ.get("GITHUB_FILE_PATH", "")
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
 )
 log = logging.getLogger(__name__)
-
-ICS_FILE = Path(OUTPUT_DIR) / "calendar.ics"
 
 SESSION = requests.Session()
 SESSION.headers.update(
@@ -66,7 +64,6 @@ def scrape_event_ids() -> list[str]:
             "a", title=re.compile(r"next page", re.I)
         )
         if not next_link:
-            # Also check for "Next ›" text
             next_link = soup.find("a", string=re.compile(r"Next|›"))
         if not next_link:
             break
@@ -121,75 +118,80 @@ def build_combined_ics(event_ids: list[str]) -> str:
     return "\r\n".join(lines)
 
 
+def push_to_github(content: str):
+    """Push the ICS file to a GitHub repo via the Contents API."""
+    api_url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_FILE_PATH}"
+    headers = {
+        "Authorization": f"Bearer {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+
+    # Get current file SHA (needed for updates)
+    sha = None
+    resp = requests.get(api_url, headers=headers, timeout=15)
+    if resp.status_code == 200:
+        sha = resp.json()["sha"]
+    elif resp.status_code != 404:
+        resp.raise_for_status()
+
+    encoded = base64.b64encode(content.encode()).decode()
+    body: dict = {
+        "message": "Update library calendar feed",
+        "content": encoded,
+        "committer": {
+            "name": "library-calendar-sync",
+            "email": "noreply@library-calendar-sync",
+        },
+    }
+    if sha:
+        body["sha"] = sha
+
+    resp = requests.put(api_url, headers=headers, json=body, timeout=30)
+    resp.raise_for_status()
+
+    if sha:
+        log.info("Updated %s in %s", GITHUB_FILE_PATH, GITHUB_REPO)
+    else:
+        log.info("Created %s in %s", GITHUB_FILE_PATH, GITHUB_REPO)
+
+
 def refresh():
-    """Run a full scrape and regenerate the ICS file."""
+    """Run a full scrape and push the ICS file to GitHub."""
     try:
         log.info("Starting refresh...")
         event_ids = scrape_event_ids()
         if not event_ids:
-            log.warning("No events found, skipping ICS generation")
+            log.warning("No events found, skipping")
             return
 
         ics_content = build_combined_ics(event_ids)
-        ICS_FILE.parent.mkdir(parents=True, exist_ok=True)
-        ICS_FILE.write_text(ics_content)
-        log.info(
-            "Wrote %s with %d events",
-            ICS_FILE,
-            ics_content.count("BEGIN:VEVENT"),
-        )
+        event_count = ics_content.count("BEGIN:VEVENT")
+        log.info("Built ICS with %d events", event_count)
+
+        push_to_github(ics_content)
     except Exception:
         log.exception("Refresh failed")
 
 
-def refresh_loop():
-    """Periodically refresh the ICS file."""
+def main():
+    missing = []
+    if not CALENDAR_URL:
+        missing.append("CALENDAR_URL")
+    if not GITHUB_TOKEN:
+        missing.append("GITHUB_TOKEN")
+    if not GITHUB_REPO:
+        missing.append("GITHUB_REPO")
+    if not GITHUB_FILE_PATH:
+        missing.append("GITHUB_FILE_PATH")
+    if missing:
+        log.error("Required environment variables not set: %s", ", ".join(missing))
+        raise SystemExit(1)
+
     while True:
         refresh()
         log.info("Next refresh in %ds", REFRESH_INTERVAL)
         time.sleep(REFRESH_INTERVAL)
-
-
-class ICSHandler(http.server.BaseHTTPRequestHandler):
-    def do_GET(self):
-        if self.path in ("/", "/calendar.ics"):
-            try:
-                content = ICS_FILE.read_bytes()
-                self.send_response(200)
-                self.send_header(
-                    "Content-Type", "text/calendar; charset=utf-8"
-                )
-                self.send_header(
-                    "Content-Disposition",
-                    'inline; filename="calendar.ics"',
-                )
-                self.end_headers()
-                self.wfile.write(content)
-            except FileNotFoundError:
-                self.send_error(503, "Calendar not yet generated")
-        elif self.path == "/health":
-            self.send_response(200)
-            self.send_header("Content-Type", "text/plain")
-            self.end_headers()
-            self.wfile.write(b"ok")
-        else:
-            self.send_error(404)
-
-    def log_message(self, format, *args):
-        log.info(format, *args)
-
-
-def main():
-    if not CALENDAR_URL:
-        log.error("CALENDAR_URL is required (e.g. https://example.librarycalendar.com)")
-        raise SystemExit(1)
-
-    thread = threading.Thread(target=refresh_loop, daemon=True)
-    thread.start()
-
-    server = http.server.HTTPServer(("0.0.0.0", PORT), ICSHandler)
-    log.info("Serving on port %d", PORT)
-    server.serve_forever()
 
 
 if __name__ == "__main__":
