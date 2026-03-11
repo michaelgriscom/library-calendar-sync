@@ -12,12 +12,8 @@ from pathlib import Path
 import requests
 from bs4 import BeautifulSoup
 
-CALENDAR_URL = os.environ.get(
-    "CALENDAR_URL", "https://swpl.librarycalendar.com"
-).rstrip("/")
-CALENDAR_FILTERS = os.environ.get(
-    "CALENDAR_FILTERS", "age_groups[1]=1&branches[73]=73"
-)
+CALENDAR_URL = os.environ.get("CALENDAR_URL", "").rstrip("/")
+CALENDAR_FILTERS = os.environ.get("CALENDAR_FILTERS", "")
 REFRESH_INTERVAL = int(os.environ.get("REFRESH_INTERVAL", "3600"))
 OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "/data")
 PORT = int(os.environ.get("PORT", "8080"))
@@ -45,7 +41,8 @@ def scrape_event_ids() -> list[str]:
     page = 0
 
     while True:
-        url = f"{CALENDAR_URL}/events/upcoming?{CALENDAR_FILTERS}&page={page}"
+        params = f"{CALENDAR_FILTERS}&page={page}" if CALENDAR_FILTERS else f"page={page}"
+        url = f"{CALENDAR_URL}/events/upcoming?{params}"
         log.info("Fetching listing page %d", page)
         resp = SESSION.get(url, timeout=30)
         resp.raise_for_status()
@@ -183,6 +180,10 @@ class ICSHandler(http.server.BaseHTTPRequestHandler):
 
 
 def main():
+    if not CALENDAR_URL:
+        log.error("CALENDAR_URL is required (e.g. https://example.librarycalendar.com)")
+        raise SystemExit(1)
+
     thread = threading.Thread(target=refresh_loop, daemon=True)
     thread.start()
 
