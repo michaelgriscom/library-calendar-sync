@@ -7,6 +7,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ ./src/
 
+RUN mkdir /data && chown nobody:nogroup /data
+
 USER nobody
 
 EXPOSE 8080
