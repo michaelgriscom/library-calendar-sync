@@ -110,6 +110,15 @@ def build_combined_ics(event_ids: list[str]) -> str:
                         count=1,
                         flags=re.DOTALL,
                     )
+                # Merge ROOM into LOCATION (ROOM is non-standard, calendar apps ignore it)
+                room_match = re.search(r"^ROOM:\s*(.+)$", vevent, re.MULTILINE)
+                loc_match = re.search(r"^LOCATION:(.+)$", vevent, re.MULTILINE)
+                if room_match and loc_match:
+                    room = room_match.group(1).strip()
+                    location = loc_match.group(1).strip()
+                    new_location = f"LOCATION:{room}\\n{location}"
+                    vevent = vevent.replace(loc_match.group(0), new_location)
+                    vevent = re.sub(r"\r?\nROOM:.*$", "", vevent, flags=re.MULTILINE)
                 vevents.append(vevent)
 
         if i < len(event_ids) - 1:
