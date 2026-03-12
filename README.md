@@ -37,6 +37,7 @@ Then subscribe in your calendar app using the public URL where your site serves 
 | `CALENDAR_NAME` | No | `Library Events` | Display name shown in calendar apps |
 | `REFRESH_INTERVAL` | No | `3600` | Seconds between scrapes |
 | `REQUEST_DELAY` | No | `1.0` | Seconds between individual HTTP requests (rate limiting) |
+| `PUSH_URL` | No | *(none)* | URL to GET after each successful sync (e.g. Uptime Kuma push monitor) |
 
 ### Finding your filters
 
