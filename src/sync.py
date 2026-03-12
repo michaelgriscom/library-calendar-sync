@@ -40,7 +40,7 @@ def scrape_event_ids() -> list[str]:
 
     while True:
         params = f"{CALENDAR_FILTERS}&page={page}" if CALENDAR_FILTERS else f"page={page}"
-        url = f"{CALENDAR_URL}/events/upcoming?{params}"
+        url = f"{CALENDAR_URL}/events/list?{params}"
         log.info("Fetching listing page %d", page)
         resp = SESSION.get(url, timeout=30)
         resp.raise_for_status()
