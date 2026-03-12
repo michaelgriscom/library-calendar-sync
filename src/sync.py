@@ -98,7 +98,19 @@ def build_combined_ics(event_ids: list[str]) -> str:
                 r"(BEGIN:VEVENT.*?END:VEVENT)", ics_text, re.DOTALL
             )
             if match:
-                vevents.append(match.group(1))
+                vevent = match.group(1)
+                # Append event URL to description so it's clickable in calendar apps
+                url_match = re.search(r"^URL:(.+)$", vevent, re.MULTILINE)
+                if url_match:
+                    event_url = url_match.group(1).strip()
+                    vevent = re.sub(
+                        r"(DESCRIPTION:.*?)(\r?\nURL:|\r?\nEND:VEVENT)",
+                        rf"\1\\n\\n{event_url}\2",
+                        vevent,
+                        count=1,
+                        flags=re.DOTALL,
+                    )
+                vevents.append(vevent)
 
         if i < len(event_ids) - 1:
             time.sleep(REQUEST_DELAY)
