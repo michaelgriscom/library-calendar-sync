@@ -19,6 +19,7 @@ REQUEST_DELAY = float(os.environ.get("REQUEST_DELAY", "1.0"))
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 GITHUB_REPO = os.environ.get("GITHUB_REPO", "")
 GITHUB_FILE_PATH = os.environ.get("GITHUB_FILE_PATH", "")
+PUSH_URL = os.environ.get("PUSH_URL", "")
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
@@ -182,6 +183,13 @@ def refresh():
         log.info("Built ICS with %d events", event_count)
 
         push_to_github(ics_content)
+
+        if PUSH_URL:
+            try:
+                requests.get(PUSH_URL, timeout=10)
+                log.info("Sent push monitor heartbeat")
+            except Exception:
+                log.warning("Failed to send push monitor heartbeat", exc_info=True)
     except Exception:
         log.exception("Refresh failed")
 
