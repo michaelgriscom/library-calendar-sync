@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/michaelgriscom/library-calendar-sync/compare/v0.2.0...v0.3.0) (2026-03-12)
+
+
+### Features
+
+* add push monitor heartbeat support ([b659eda](https://github.com/michaelgriscom/library-calendar-sync/commit/b659eda353a161d34964ef553bffab8196210001))
+
+
+### Documentation
+
+* add PUSH_URL to configuration table ([d20f789](https://github.com/michaelgriscom/library-calendar-sync/commit/d20f7895bcdab28213d9e69ec04561959d189a49))
+
 ## [0.2.0](https://github.com/michaelgriscom/library-calendar-sync/compare/v0.1.0...v0.2.0) (2026-03-12)
 
 
