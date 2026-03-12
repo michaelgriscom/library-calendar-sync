@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.0](https://github.com/michaelgriscom/library-calendar-sync/compare/v0.1.0...v0.2.0) (2026-03-12)
+
+
+### Features
+
+* add event URLs to calendar event descriptions ([153c73b](https://github.com/michaelgriscom/library-calendar-sync/commit/153c73b9e27306a8c8cb56e30a3d17e5330e0711)), closes [#2](https://github.com/michaelgriscom/library-calendar-sync/issues/2)
+* merge ROOM into LOCATION for proper calendar display ([14cfdb4](https://github.com/michaelgriscom/library-calendar-sync/commit/14cfdb4b1702e43c5d53bec15c56fab6c4c99379))
+
+
+### Bug Fixes
+
+* keep raw street address in LOCATION, drop non-standard ROOM ([9c58c9e](https://github.com/michaelgriscom/library-calendar-sync/commit/9c58c9e66e498b0e1b9771e13f4c3f2b7ecb182a))
+
 ## 0.1.0 (2026-03-12)
 
 
