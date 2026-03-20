@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/michaelgriscom/library-calendar-sync/compare/v0.3.0...v0.3.1) (2026-03-20)
+
+
+### Performance Improvements
+
+* skip redundant pushes and increase default refresh to 12h ([915b98c](https://github.com/michaelgriscom/library-calendar-sync/commit/915b98c6b3465ec98777c35a3517fbb87df6fe76))
+
 ## [0.3.0](https://github.com/michaelgriscom/library-calendar-sync/compare/v0.2.0...v0.3.0) (2026-03-12)
 
 
