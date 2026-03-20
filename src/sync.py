@@ -2,6 +2,7 @@
 """Scrapes a LibraryCalendar.com site and pushes a combined ICS feed to GitHub."""
 
 import base64
+import hashlib
 import logging
 import os
 import re
@@ -12,7 +13,7 @@ from bs4 import BeautifulSoup
 
 CALENDAR_URL = os.environ.get("CALENDAR_URL", "").rstrip("/")
 CALENDAR_FILTERS = os.environ.get("CALENDAR_FILTERS", "")
-REFRESH_INTERVAL = int(os.environ.get("REFRESH_INTERVAL", "3600"))
+REFRESH_INTERVAL = int(os.environ.get("REFRESH_INTERVAL", "43200"))
 CALENDAR_NAME = os.environ.get("CALENDAR_NAME", "Library Events")
 REQUEST_DELAY = float(os.environ.get("REQUEST_DELAY", "1.0"))
 
@@ -147,6 +148,14 @@ def push_to_github(content: str):
         sha = resp.json()["sha"]
     elif resp.status_code != 404:
         resp.raise_for_status()
+
+    # Skip push if content is unchanged (compare git blob SHAs)
+    if sha:
+        blob = f"blob {len(content.encode())}\0".encode() + content.encode()
+        content_sha = hashlib.sha1(blob).hexdigest()  # noqa: S324
+        if content_sha == sha:
+            log.info("Content unchanged, skipping push")
+            return
 
     encoded = base64.b64encode(content.encode()).decode()
     body: dict = {

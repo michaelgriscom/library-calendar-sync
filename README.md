@@ -35,7 +35,7 @@ Then subscribe in your calendar app using the public URL where your site serves 
 | `GITHUB_FILE_PATH` | **Yes** | — | Path within the repo to write the ICS file (e.g. `public/files/calendar.ics`) |
 | `CALENDAR_FILTERS` | No | *(none)* | URL query string filters (e.g. `age_groups[1]=1&branches[73]=73`) |
 | `CALENDAR_NAME` | No | `Library Events` | Display name shown in calendar apps |
-| `REFRESH_INTERVAL` | No | `3600` | Seconds between scrapes |
+| `REFRESH_INTERVAL` | No | `43200` | Seconds between scrapes (default 12 hours) |
 | `REQUEST_DELAY` | No | `1.0` | Seconds between individual HTTP requests (rate limiting) |
 | `PUSH_URL` | No | *(none)* | URL to GET after each successful sync (e.g. Uptime Kuma push monitor) |
 
