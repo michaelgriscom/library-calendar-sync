@@ -21,6 +21,8 @@ GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 GITHUB_REPO = os.environ.get("GITHUB_REPO", "")
 GITHUB_FILE_PATH = os.environ.get("GITHUB_FILE_PATH", "")
 PUSH_URL = os.environ.get("PUSH_URL", "")
+MAX_RETRIES = int(os.environ.get("MAX_RETRIES", "3"))
+RETRY_DELAY = int(os.environ.get("RETRY_DELAY", "300"))
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
@@ -179,28 +181,35 @@ def push_to_github(content: str):
 
 
 def refresh():
-    """Run a full scrape and push the ICS file to GitHub."""
-    try:
-        log.info("Starting refresh...")
-        event_ids = scrape_event_ids()
-        if not event_ids:
-            log.warning("No events found, skipping")
+    """Run a full scrape and push the ICS file to GitHub, retrying on failure."""
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            log.info("Starting refresh (attempt %d/%d)...", attempt, MAX_RETRIES)
+            event_ids = scrape_event_ids()
+            if not event_ids:
+                log.warning("No events found, skipping")
+                return
+
+            ics_content = build_combined_ics(event_ids)
+            event_count = ics_content.count("BEGIN:VEVENT")
+            log.info("Built ICS with %d events", event_count)
+
+            push_to_github(ics_content)
+
+            if PUSH_URL:
+                try:
+                    requests.get(PUSH_URL, timeout=10)
+                    log.info("Sent push monitor heartbeat")
+                except Exception:
+                    log.warning("Failed to send push monitor heartbeat", exc_info=True)
             return
-
-        ics_content = build_combined_ics(event_ids)
-        event_count = ics_content.count("BEGIN:VEVENT")
-        log.info("Built ICS with %d events", event_count)
-
-        push_to_github(ics_content)
-
-        if PUSH_URL:
-            try:
-                requests.get(PUSH_URL, timeout=10)
-                log.info("Sent push monitor heartbeat")
-            except Exception:
-                log.warning("Failed to send push monitor heartbeat", exc_info=True)
-    except Exception:
-        log.exception("Refresh failed")
+        except Exception:
+            log.exception("Refresh attempt %d/%d failed", attempt, MAX_RETRIES)
+            if attempt < MAX_RETRIES:
+                log.info("Retrying in %ds...", RETRY_DELAY)
+                time.sleep(RETRY_DELAY)
+            else:
+                log.error("All %d attempts failed, giving up", MAX_RETRIES)
 
 
 def main():
