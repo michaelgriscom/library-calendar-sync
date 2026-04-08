@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/michaelgriscom/library-calendar-sync/compare/v0.3.1...v0.4.0) (2026-04-08)
+
+
+### Features
+
+* retry refresh on transient connection failures ([5b47c77](https://github.com/michaelgriscom/library-calendar-sync/commit/5b47c77b1ed86e8faa1637fff39ac693c8d76738))
+
 ## [0.3.1](https://github.com/michaelgriscom/library-calendar-sync/compare/v0.3.0...v0.3.1) (2026-03-20)
 
 
